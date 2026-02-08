@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Site Factory Dashboard</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        .project-list { list-style: none; padding: 0; }
+        .project-item { background: #f4f4f4; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .btn { display: inline-block; padding: 0.5rem 1rem; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
+        .btn-create { margin-bottom: 2rem; }
+        .flashes { list-style: none; padding: 0; color: green; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>Site Factory Dashboard</h1>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul class=flashes>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <a href="/create" class="btn btn-create">Create New Project</a>
+
+    <h2>Running Projects</h2>
+    <ul class="project-list">
+        {% for site in sites %}
+        <li class="project-item">
+            <strong>{{ site }}</strong>
+            <a href="/sites/{{ site }}/" target="_blank">View Site</a>
+        </li>
+        {% else %}
+        <li>No projects yet.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
