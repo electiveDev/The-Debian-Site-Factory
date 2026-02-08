@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 from flask import Flask, request, redirect, render_template, flash, url_for
 from werkzeug.utils import secure_filename
 
@@ -17,7 +18,29 @@ if not os.path.exists(SITES_DIR):
 def dashboard():
     # List all directories in SITES_DIR
     sites = [d for d in os.listdir(SITES_DIR) if os.path.isdir(os.path.join(SITES_DIR, d))]
+    # Filter out 'sites' if it exists
+    sites = [s for s in sites if s != 'sites']
     return render_template('dashboard.html', sites=sites)
+
+@app.route('/delete/<project_id>', methods=['POST'])
+def delete_project(project_id):
+    # Validation
+    if not project_id or not re.match(r'^[a-z0-9-]+$', project_id):
+        flash('Invalid Project ID.')
+        return redirect(url_for('dashboard'))
+
+    project_path = os.path.join(SITES_DIR, project_id)
+
+    if os.path.exists(project_path):
+        try:
+            shutil.rmtree(project_path)
+            flash(f'Project "{project_id}" deleted successfully.')
+        except Exception as e:
+            flash(f'Error deleting project: {str(e)}')
+    else:
+        flash('Project not found.')
+
+    return redirect(url_for('dashboard'))
 
 @app.route('/create')
 def create():
