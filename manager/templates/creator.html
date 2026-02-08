@@ -1,49 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Create New Project</title>
-    <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; margin-bottom: 0.5rem; }
-        input[type="text"], textarea { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        textarea { height: 300px; font-family: monospace; }
-        .btn { display: inline-block; padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; }
-        .btn-back { background: #6c757d; }
-        .flashes { list-style: none; padding: 0; color: red; margin-bottom: 1rem; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Project - Debian Site Factory</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <h1>Create New Project</h1>
+    <div class="container">
+        <header>
+            <h1>Create New Project</h1>
+        </header>
 
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <ul class=flashes>
-            {% for message in messages %}
-            <li>{{ message }}</li>
-            {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for message in messages %}
+                <li>{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
 
-    <form action="/deploy" method="post" enctype="multipart/form-data">
-        <div class="form-group">
-            <label for="project_id">Project ID (e.g., weather-widget)</label>
-            <input type="text" id="project_id" name="project_id" required pattern="[a-z0-9-]+" title="Only lowercase letters, numbers, and hyphens allowed.">
-        </div>
+        <form action="/deploy" method="post" enctype="multipart/form-data" class="project-card">
+            <div class="form-group">
+                <label for="project_id">Project ID (e.g., weather-widget)</label>
+                <input type="text" id="project_id" name="project_id" required pattern="[a-z0-9-]+" title="Only lowercase letters, numbers, and hyphens allowed.">
+            </div>
 
-        <div class="form-group">
-            <label for="html_content">HTML Code</label>
-            <textarea id="html_content" name="html_content" required></textarea>
-        </div>
+            <div class="form-group">
+                <label for="html_content">HTML Code</label>
+                <textarea id="html_content" name="html_content" required></textarea>
+            </div>
 
-        <div class="form-group">
-            <label for="assets">Assets (Images, CSS, JS)</label>
-            <input type="file" id="assets" name="assets" multiple>
-        </div>
+            <div class="form-group">
+                <label for="assets">Assets (Images, CSS, JS)</label>
+                <input type="file" id="assets" name="assets" multiple>
+            </div>
 
-        <button type="submit" class="btn">Deploy Project</button>
-        <a href="/" class="btn btn-back">Cancel</a>
-    </form>
+            <div class="project-actions">
+                <button type="submit" class="btn btn-primary">Deploy Project</button>
+                <a href="/" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
 </body>
 </html>
