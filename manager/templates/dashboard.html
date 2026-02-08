@@ -31,12 +31,12 @@
                 <div class="project-card">
                     <div class="project-header">
                         <span class="project-name">{{ site }}</span>
+                        <form action="{{ url_for('delete_project', project_id=site) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete {{ site }}?');">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
                     </div>
                     <div class="project-actions">
                         <a href="/sites/{{ site }}/" target="_blank" class="btn btn-secondary">View Site</a>
-                        <form action="{{ url_for('delete_project', project_id=site) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete {{ site }}?');">
-                            <button type="submit" class="btn btn-danger">Delete</button>
-                        </form>
                     </div>
                 </div>
                 {% endfor %}
