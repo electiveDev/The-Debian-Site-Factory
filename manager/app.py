@@ -42,6 +42,39 @@ def delete_project(project_id):
 
     return redirect(url_for('dashboard'))
 
+@app.route('/edit/<project_id>', methods=['GET', 'POST'])
+def edit_project(project_id):
+    if not project_id or not re.match(r'^[a-z0-9-]+$', project_id):
+        flash('Invalid Project ID.')
+        return redirect(url_for('dashboard'))
+
+    project_path = os.path.join(SITES_DIR, project_id)
+    if not os.path.exists(project_path):
+        flash('Project not found.')
+        return redirect(url_for('dashboard'))
+
+    index_file = os.path.join(project_path, 'index.html')
+
+    if request.method == 'POST':
+        html_content = request.form.get('html_content')
+        try:
+            with open(index_file, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            flash(f'Project "{project_id}" updated successfully.')
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            flash(f'Error updating project: {str(e)}')
+            return redirect(url_for('edit_project', project_id=project_id))
+
+    # GET request
+    if os.path.exists(index_file):
+        with open(index_file, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+    else:
+        html_content = ""
+
+    return render_template('edit.html', project_id=project_id, html_content=html_content)
+
 @app.route('/create')
 def create():
     return render_template('creator.html')
@@ -71,7 +104,7 @@ def deploy():
         os.makedirs(project_path)
 
         # Save index.html
-        with open(os.path.join(project_path, 'index.html'), 'w') as f:
+        with open(os.path.join(project_path, 'index.html'), 'w', encoding='utf-8') as f:
             f.write(html_content)
 
         # Save assets
