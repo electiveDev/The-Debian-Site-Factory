@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+from datetime import datetime
 from flask import Flask, request, redirect, render_template, flash, url_for
 from werkzeug.utils import secure_filename
 
@@ -13,6 +14,41 @@ SITES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../sites')
 # Ensure the sites directory exists
 if not os.path.exists(SITES_DIR):
     os.makedirs(SITES_DIR)
+
+# --- Hilfsfunktionen für Rollback & Logging ---
+
+def create_backup(file_path, project_path):
+    """Erstellt eine Kopie der Datei im .backups Ordner vor Änderungen."""
+    if os.path.exists(file_path):
+        # Backup Ordner im Projekt erstellen
+        backup_dir = os.path.join(project_path, '.backups')
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir)
+        
+        # Zeitstempel für Versionierung
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = os.path.basename(file_path)
+        backup_name = f"{filename}_{timestamp}.bak"
+        
+        try:
+            shutil.copy2(file_path, os.path.join(backup_dir, backup_name))
+            return True
+        except Exception as e:
+            print(f"Backup failed: {e}")
+            return False
+    return False
+
+def append_log(project_path, message):
+    """Schreibt Aktionen in das Projekt-Log."""
+    log_file = os.path.join(project_path, 'deployment.log')
+    timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+    try:
+        with open(log_file, 'a', encoding='utf-8') as f:
+            f.write(f"{timestamp} {message}\n")
+    except Exception as e:
+        print(f"Logging failed: {e}")
+
+# --- Routen ---
 
 @app.route('/')
 def dashboard():
@@ -53,27 +89,73 @@ def edit_project(project_id):
         flash('Project not found.')
         return redirect(url_for('dashboard'))
 
-    index_file = os.path.join(project_path, 'index.html')
+    # Bestimmen, welche Datei bearbeitet werden soll (Default: index.html)
+    relative_file_path = request.args.get('file', 'index.html')
+    
+    # Path Traversal Schutz (wichtig auch lokal)
+    if '..' in relative_file_path or relative_file_path.startswith('/'):
+        flash('Ungültiger Dateipfad.')
+        return redirect(url_for('edit_project', project_id=project_id))
 
+    full_file_path = os.path.join(project_path, relative_file_path)
+
+    # POST: Datei Speichern
     if request.method == 'POST':
-        html_content = request.form.get('html_content')
+        new_content = request.form.get('file_content')
+        
         try:
-            with open(index_file, 'w', encoding='utf-8') as f:
-                f.write(html_content)
-            flash(f'Project "{project_id}" updated successfully.')
-            return redirect(url_for('dashboard'))
+            # 1. Rollback erstellen
+            create_backup(full_file_path, project_path)
+            
+            # 2. Verzeichnisse erstellen (falls Datei in neuem Unterordner liegt)
+            os.makedirs(os.path.dirname(full_file_path), exist_ok=True)
+            
+            # 3. Datei schreiben
+            with open(full_file_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            
+            # 4. Loggen
+            append_log(project_path, f"Datei bearbeitet/erstellt: {relative_file_path}")
+            
+            flash(f'Gespeichert: {relative_file_path} (Backup erstellt)')
+            # Redirect um POST-Resubmission zu verhindern
+            return redirect(url_for('edit_project', project_id=project_id, file=relative_file_path))
+            
         except Exception as e:
-            flash(f'Error updating project: {str(e)}')
-            return redirect(url_for('edit_project', project_id=project_id))
+            flash(f'Fehler beim Speichern: {str(e)}')
 
-    # GET request
-    if os.path.exists(index_file):
-        with open(index_file, 'r', encoding='utf-8') as f:
-            html_content = f.read()
-    else:
-        html_content = ""
+    # GET: Dateiliste und Inhalt laden
+    
+    # Dateibaum scannen
+    file_list = []
+    for root, dirs, files in os.walk(project_path):
+        if '.backups' in root: continue # Backups ausblenden
+        for file in files:
+            # Relativen Pfad berechnen
+            rel_path = os.path.relpath(os.path.join(root, file), project_path)
+            file_list.append(rel_path)
+    
+    file_list.sort()
 
-    return render_template('edit.html', project_id=project_id, html_content=html_content)
+    # Dateiinhalt lesen
+    file_content = ""
+    is_binary = False
+    
+    if os.path.exists(full_file_path):
+        try:
+            # Versuch, als Text zu lesen
+            with open(full_file_path, 'r', encoding='utf-8') as f:
+                file_content = f.read()
+        except UnicodeDecodeError:
+            is_binary = True
+            file_content = "[Binärdatei - Vorschau nicht verfügbar]"
+    
+    return render_template('edit.html', 
+                           project_id=project_id, 
+                           file_content=file_content, 
+                           files=file_list, 
+                           current_file=relative_file_path,
+                           is_binary=is_binary)
 
 @app.route('/create')
 def create():
@@ -114,6 +196,9 @@ def deploy():
                 filename = secure_filename(asset.filename)
                 asset_path = os.path.join(project_path, filename)
                 asset.save(asset_path)
+        
+        # Initial Log
+        append_log(project_path, "Projekt initial erstellt.")
 
         flash(f'Project "{project_id}" deployed successfully!')
         return redirect(url_for('dashboard'))
